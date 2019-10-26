@@ -1,6 +1,7 @@
 // HX1230 96x68 LCD FB library example
 // Gauges
 // (c) 2019 Pawel A. Hernik
+// YouTube video: https://youtu.be/x94y-qH2RBs
 
 /*
   HX1230 96x68 LCD connections (header on bottom, from left):

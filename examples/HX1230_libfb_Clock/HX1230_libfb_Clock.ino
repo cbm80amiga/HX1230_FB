@@ -1,6 +1,7 @@
 // HX1230 96x68 LCD FB library example
 // Analog Clock without floating-point calculations, no slow sin, cos
 // (c) 2019 Pawel A. Hernik
+// YouTube video: https://youtu.be/uBId9KbtGuQ
 
 /*
   HX1230 96x68 LCD connections (header on bottom, from left):
