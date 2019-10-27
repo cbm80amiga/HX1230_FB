@@ -70,8 +70,8 @@ const uint8_t sinTab[91] PROGMEM = {
 
 int fastSin(int i)
 {
-  if(i<0) i+=360;
-  if(i>=360) i-=360;
+  while(i<0) i+=360;
+  while(i>=360) i-=360;
   if(i<90)  return(pgm_read_byte(&sinTab[i])); else
   if(i<180) return(pgm_read_byte(&sinTab[180-i])); else
   if(i<270) return(-pgm_read_byte(&sinTab[i-180])); else
