@@ -279,8 +279,8 @@ void drawEqBars()
   int r;
   r=random(12);
   barLevSet[r]=random(5,67); barDec[r]=0;
-  if(r>0)  barLevSet[r-1]=7*barLevSet[r]/10; barDec[r-1]=0;
-  if(r<11) barLevSet[r+1]=7*barLevSet[r]/10; barDec[r+1]=0;
+  if(r>0)  { barLevSet[r-1]=7*barLevSet[r]/10; barDec[r-1]=0; }
+  if(r<11) { barLevSet[r+1]=7*barLevSet[r]/10; barDec[r+1]=0; }
 }
 
 unsigned long ms,tm=15000;
