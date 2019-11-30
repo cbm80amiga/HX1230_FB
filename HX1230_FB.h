@@ -16,9 +16,12 @@
 #ifndef _HX1230_FB_H
 #define _HX1230_FB_H 
 
+// define for real 9-bit SPI transfer, each 8 bytes are transfered in 9 bytes with D/C bit
+// otherwise each 9-bit data is transfered in 2 bytes what seems to be a problem for some HX1230 LCDs
+#define REAL_SPI9
+
 #include <Arduino.h>
 #include <avr/pgmspace.h>
-
 
 #define CMD 0x00
 #define DAT 0x80
@@ -70,7 +73,7 @@ struct _propFont
 // ---------------------------------
 class HX1230_FB {
 public:
-	HX1230_FB(uint8_t rst, uint8_t cs);
+  HX1230_FB(uint8_t rst, uint8_t cs);
 
   inline void sendSPI(uint8_t v, uint8_t dc) __attribute__((always_inline)); // costs about 350B of flash
   inline void sendCmd(uint8_t cmd);

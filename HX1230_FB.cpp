@@ -46,11 +46,10 @@ void HX1230_FB::init()
   }
   
   SPI.begin();
+  SPI.setDataMode(SPI_MODE0);
 #ifdef __AVR__
   SPI.setClockDivider(SPI_CLOCK_DIV2);
-  //SPI.setDataMode(SPI_MODE0);
 #endif
-  
   CS_ACTIVE;
   for(int i=0; i<sizeof(initData); i++) sendCmd(pgm_read_byte(initData+i));
   CS_IDLE;
@@ -159,12 +158,27 @@ void HX1230_FB::display()
 {
   gotoXY(0,0);
   CS_ACTIVE;
+#ifdef REAL_SPI9  
+  uint8_t v,val,lastByte;
+  for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
+    for(int byteNo=lastByte=0;byteNo<7;byteNo++) {
+      v = scr[i+byteNo];
+      val = (1<<(7-byteNo)) | (v>>(byteNo+1)) | lastByte;  // DATA bit and real data
+      lastByte = v<<(7-byteNo);
+      SPI.transfer(val);
+    }
+    v = scr[i+7];
+    SPI.transfer(1|lastByte);
+    SPI.transfer(v);
+  }
+#else
   for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
     sendSPI(scr[i+0],DAT); sendSPI(scr[i+1],DAT);
     sendSPI(scr[i+2],DAT); sendSPI(scr[i+3],DAT);
     sendSPI(scr[i+4],DAT); sendSPI(scr[i+5],DAT);
     sendSPI(scr[i+6],DAT); sendSPI(scr[i+7],DAT);
   }
+#endif
   CS_IDLE;
 }
 // ----------------------------------------------------------------
