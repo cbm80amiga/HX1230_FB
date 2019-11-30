@@ -338,7 +338,7 @@ void HX1230_FB::drawRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t col
   if(drawVright) drawLineVfast(x+w-1,y+1, y+h-2,col);
 }
 // ----------------------------------------------------------------
-// dithered version (50% of brightness)
+// dithered version
 void HX1230_FB::drawRectD(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t col)
 {
   if(x>=SCR_WD || y>=SCR_HT) return;
@@ -358,7 +358,7 @@ void HX1230_FB::fillRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t col
   for(int i=x;i<x+w;i++) drawLineVfast(i,y,y+h-1,col);
 }
 // ----------------------------------------------------------------
-// dithered version (50% of brightness)
+// dithered version
 void HX1230_FB::fillRectD(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t col)
 {
   if(x>=SCR_WD || y>=SCR_HT || w<=0 || h<=0) return;
@@ -422,7 +422,7 @@ void HX1230_FB::fillCircle(uint8_t x0, uint8_t y0, uint8_t r, uint8_t col)
   }
 }
 // ----------------------------------------------------------------
-// dithered version (50% of brightness)
+// dithered version
 void HX1230_FB::fillCircleD(uint8_t x0, uint8_t y0, uint8_t r, uint8_t col)
 {
   drawLineVfastD(x0, y0-r, y0-r+2*r+1, col);
@@ -456,22 +456,21 @@ void HX1230_FB::drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int
 }
 #define swap(a, b) { int16_t t = a; a = b; b = t; }
 // ----------------------------------------------------------------
+// optimized for HX1230 native frame buffer
 void HX1230_FB::fillTriangle( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
-  int16_t a, b, y, last;
+  int16_t a, b, x, last;
+  if (x0 > x1) { swap(y0, y1); swap(x0, x1); }
+  if (x1 > x2) { swap(y2, y1); swap(x2, x1); }
+  if (x0 > x1) { swap(y0, y1); swap(x0, x1); }
 
-  // Sort coordinates by Y order (y2 >= y1 >= y0)
-  if (y0 > y1) { swap(y0, y1); swap(x0, x1); }
-  if (y1 > y2) { swap(y2, y1); swap(x2, x1); }
-  if (y0 > y1) { swap(y0, y1); swap(x0, x1); }
-
-  if(y0 == y2) { // Handle awkward all-on-same-line case as its own thing
+  if(x0 == x2) { // Handle awkward all-on-same-line case as its own thing
     a = b = x0;
-    if(x1 < a)      a = x1;
-    else if(x1 > b) b = x1;
-    if(x2 < a)      a = x2;
-    else if(x2 > b) b = x2;
-    drawLineHfast(a, b, y0, color);
+    if(y1 < a)      a = y1;
+    else if(y1 > b) b = y1;
+    if(y2 < a)      a = y2;
+    else if(y2 > b) b = y2;
+    drawLineVfast(x0, a, b, color);
     return;
   }
 
@@ -482,66 +481,47 @@ void HX1230_FB::fillTriangle( int16_t x0, int16_t y0, int16_t x1, int16_t y1, in
     dy02 = y2 - y0,
     dx12 = x2 - x1,
     dy12 = y2 - y1;
-  long
-    sa   = 0,
-    sb   = 0;
+  long sa = 0, sb = 0;
 
-  // For upper part of triangle, find scanline crossings for segments
-  // 0-1 and 0-2.  If y1=y2 (flat-bottomed triangle), the scanline y1
-  // is included here (and second loop will be skipped, avoiding a /0
-  // error there), otherwise scanline y1 is skipped here and handled
-  // in the second loop...which also avoids a /0 error here if y0=y1
-  // (flat-topped triangle).
-  if(y1 == y2) last = y1;   // Include y1 scanline
-  else         last = y1-1; // Skip it
+  if(x1 == x2) last = x1;
+  else         last = x1-1;
 
-  for(y=y0; y<=last; y++) {
-    a   = x0 + sa / dy01;
-    b   = x0 + sb / dy02;
-    sa += dx01;
-    sb += dx02;
-    /* longhand:
-    a = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
-    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    */
+  for(x=x0; x<=last; x++) {
+    a   = y0 + sa / dx01;
+    b   = y0 + sb / dx02;
+    sa += dy01;
+    sb += dy02;
     if(a > b) swap(a,b);
-    drawLineHfast(a, b, y, color);
+    drawLineVfast(x, a, b, color);
   }
 
-  // For lower part of triangle, find scanline crossings for segments
-  // 0-2 and 1-2.  This loop is skipped if y1=y2.
-  sa = dx12 * (y - y1);
-  sb = dx02 * (y - y0);
-  for(; y<=y2; y++) {
-    a   = x1 + sa / dy12;
-    b   = x0 + sb / dy02;
-    sa += dx12;
-    sb += dx02;
-    /* longhand:
-    a = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    */
+  sa = dy12 * (x - x1);
+  sb = dy02 * (x - x0);
+  for(; x<=x2; x++) {
+    a   = y1 + sa / dx12;
+    b   = y0 + sb / dx02;
+    sa += dy12;
+    sb += dy02;
     if(a > b) swap(a,b);
-    drawLineHfast(a, b, y, color);
+    drawLineVfast(x, a, b, color);
   }
 }
 // ----------------------------------------------------------------
+// optimized for HX1230 native frame buffer
 void HX1230_FB::fillTriangleD( int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color)
 {
-  int16_t a, b, y, last;
+  int16_t a, b, x, last;
+  if (x0 > x1) { swap(y0, y1); swap(x0, x1); }
+  if (x1 > x2) { swap(y2, y1); swap(x2, x1); }
+  if (x0 > x1) { swap(y0, y1); swap(x0, x1); }
 
-  // Sort coordinates by Y order (y2 >= y1 >= y0)
-  if (y0 > y1) { swap(y0, y1); swap(x0, x1); }
-  if (y1 > y2) { swap(y2, y1); swap(x2, x1); }
-  if (y0 > y1) { swap(y0, y1); swap(x0, x1); }
-
-  if(y0 == y2) { // Handle awkward all-on-same-line case as its own thing
+  if(x0 == x2) { // Handle awkward all-on-same-line case as its own thing
     a = b = x0;
-    if(x1 < a)      a = x1;
-    else if(x1 > b) b = x1;
-    if(x2 < a)      a = x2;
-    else if(x2 > b) b = x2;
-    drawLineHfastD(a, b, y0, color);
+    if(y1 < a)      a = y1;
+    else if(y1 > b) b = y1;
+    if(y2 < a)      a = y2;
+    else if(y2 > b) b = y2;
+    drawLineVfastD(x0, a, b, color);
     return;
   }
 
@@ -552,47 +532,29 @@ void HX1230_FB::fillTriangleD( int16_t x0, int16_t y0, int16_t x1, int16_t y1, i
     dy02 = y2 - y0,
     dx12 = x2 - x1,
     dy12 = y2 - y1;
-  long
-    sa   = 0,
-    sb   = 0;
+  long sa = 0, sb = 0;
 
-  // For upper part of triangle, find scanline crossings for segments
-  // 0-1 and 0-2.  If y1=y2 (flat-bottomed triangle), the scanline y1
-  // is included here (and second loop will be skipped, avoiding a /0
-  // error there), otherwise scanline y1 is skipped here and handled
-  // in the second loop...which also avoids a /0 error here if y0=y1
-  // (flat-topped triangle).
-  if(y1 == y2) last = y1;   // Include y1 scanline
-  else         last = y1-1; // Skip it
+  if(x1 == x2) last = x1;
+  else         last = x1-1;
 
-  for(y=y0; y<=last; y++) {
-    a   = x0 + sa / dy01;
-    b   = x0 + sb / dy02;
-    sa += dx01;
-    sb += dx02;
-    /* longhand:
-    a = x0 + (x1 - x0) * (y - y0) / (y1 - y0);
-    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    */
+  for(x=x0; x<=last; x++) {
+    a   = y0 + sa / dx01;
+    b   = y0 + sb / dx02;
+    sa += dy01;
+    sb += dy02;
     if(a > b) swap(a,b);
-    drawLineHfastD(a, b, y, color);
+    drawLineVfastD(x, a, b, color);
   }
 
-  // For lower part of triangle, find scanline crossings for segments
-  // 0-2 and 1-2.  This loop is skipped if y1=y2.
-  sa = dx12 * (y - y1);
-  sb = dx02 * (y - y0);
-  for(; y<=y2; y++) {
-    a   = x1 + sa / dy12;
-    b   = x0 + sb / dy02;
-    sa += dx12;
-    sb += dx02;
-    /* longhand:
-    a = x1 + (x2 - x1) * (y - y1) / (y2 - y1);
-    b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
-    */
+  sa = dy12 * (x - x1);
+  sb = dy02 * (x - x0);
+  for(; x<=x2; x++) {
+    a   = y1 + sa / dx12;
+    b   = y0 + sb / dx02;
+    sa += dy12;
+    sb += dy02;
     if(a > b) swap(a,b);
-    drawLineHfastD(a, b, y, color);
+    drawLineVfastD(x, a, b, color);
   }
 }
 // ----------------------------------------------------------------
