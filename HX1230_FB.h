@@ -110,7 +110,7 @@ public:
   void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
   void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
   void fillTriangleD(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
-  void setDither(uint8_t s);
+  void setDither(int8_t s);
   int drawBitmap(const uint8_t *bmp, int x, uint8_t y, uint8_t w, uint8_t h);
   int drawBitmap(const uint8_t *bmp, int x, uint8_t y);
 
@@ -130,7 +130,7 @@ public:
   void setIsNumberFun(bool (*fun)(uint8_t)) { isNumberFun=fun; }
   
 public:
-  byte scr[SCR_WD*SCR_HT8];
+  static byte scr[SCR_WD*SCR_HT8];
   byte scrWd = SCR_WD;
   byte scrHt = SCR_HT8;
   uint8_t csPin, rstPin;

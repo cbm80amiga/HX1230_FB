@@ -25,6 +25,8 @@ HX1230_FB::HX1230_FB(uint8_t rst, uint8_t cs)
   csPin   = cs;
 }
 // ----------------------------------------------------------------
+byte HX1230_FB::scr[SCR_WD*SCR_HT8];
+
 void HX1230_FB::init()
 {
   scrWd=SCR_WD;
@@ -117,7 +119,8 @@ void HX1230_FB::setScroll(byte val)
   CS_IDLE;
 }
 // ----------------------------------------------------------------
-// 0..3
+// 0..3, only 0 and 2 supported on HX1230
+// 180 degrees doesn't work on some HX1230 LCDs
 void HX1230_FB::setRotate(int mode)
 {
   CS_ACTIVE;
@@ -158,7 +161,18 @@ void HX1230_FB::display()
 {
   gotoXY(0,0);
   CS_ACTIVE;
-#ifdef REAL_SPI9  
+#ifdef REAL_SPI9
+/*
+  s0 d0000000
+  s1 0d111111
+  s2 11d22222
+  s3 222d3333
+  s4 3333d444
+  s5 44444d55
+  s6 555555d6
+  s7 6666666d
+  s8 77777777
+*/
   uint8_t v,val,lastByte;
   for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
     for(int byteNo=lastByte=0;byteNo<7;byteNo++) {
@@ -561,34 +575,42 @@ void HX1230_FB::fillTriangleD( int16_t x0, int16_t y0, int16_t x1, int16_t y1, i
 const byte HX1230_FB::ditherTab[4*17] PROGMEM = {
   0x00,0x00,0x00,0x00, // 0
 
-  0x88,0x00,0x00,0x00, // 1
-  0x88,0x00,0x22,0x00, // 2
-  0x88,0x00,0xaa,0x00, // 3
-  0xaa,0x00,0xaa,0x00, // 4
-  0xaa,0x44,0xaa,0x00, // 5
-  0xaa,0x44,0xaa,0x11, // 6
-  0xaa,0x44,0xaa,0x55, // 7
-
-  0xaa,0x55,0xaa,0x55, // 8
-
-  0xaa,0xdd,0xaa,0x55, // 9
-  0xaa,0xdd,0xaa,0x77, // 10
-  0xaa,0xdd,0xaa,0xff, // 11
-  0xaa,0xff,0xaa,0xff, // 12
-  0xbb,0xff,0xaa,0xff, // 13
-  0xbb,0xff,0xee,0xff, // 14
-  0xbb,0xff,0xff,0xff, // 15
+  0x00,0x00,0x00,0x88, // 1
+  0x00,0x22,0x00,0x88, // 2
+  0x00,0xaa,0x00,0x88, // 3
+  0x00,0xaa,0x00,0xaa, // 4
+  0x44,0xaa,0x00,0xaa, // 5
+  0x44,0xaa,0x11,0xaa, // 6
+  0x44,0xaa,0x55,0xaa, // 7
+  
+  0x55,0xaa,0x55,0xaa, // 8
+  
+  0xdd,0xaa,0x55,0xaa, // 9
+  0xdd,0xaa,0x77,0xaa, // 10
+  0xdd,0xaa,0xff,0xaa, // 11
+  0xff,0xaa,0xff,0xaa, // 12
+  0xff,0xee,0xff,0xaa, // 13
+  0xff,0xee,0xff,0xbb, // 14
+  0xff,0xee,0xff,0xff, // 15
 
   0xff,0xff,0xff,0xff  // 16
 };
 
-void HX1230_FB::setDither(uint8_t s)
+void HX1230_FB::setDither(int8_t s)
 {
-  if(s>16) s=16;;
-  pattern[0] = pgm_read_byte(ditherTab+s*4+0);
-  pattern[1] = pgm_read_byte(ditherTab+s*4+1);
-  pattern[2] = pgm_read_byte(ditherTab+s*4+2);
-  pattern[3] = pgm_read_byte(ditherTab+s*4+3);
+  if(s>16) s=16;
+  if(s<-16) s=-16;
+  if(s<0) {
+    pattern[0] = ~pgm_read_byte(ditherTab-s*4+0);
+    pattern[1] = ~pgm_read_byte(ditherTab-s*4+1);
+    pattern[2] = ~pgm_read_byte(ditherTab-s*4+2);
+    pattern[3] = ~pgm_read_byte(ditherTab-s*4+3);
+  } else {
+    pattern[0] = pgm_read_byte(ditherTab+s*4+0);
+    pattern[1] = pgm_read_byte(ditherTab+s*4+1);
+    pattern[2] = pgm_read_byte(ditherTab+s*4+2);
+    pattern[3] = pgm_read_byte(ditherTab+s*4+3);
+  }
 }
 // ----------------------------------------------------------------
 #define ALIGNMENT \
