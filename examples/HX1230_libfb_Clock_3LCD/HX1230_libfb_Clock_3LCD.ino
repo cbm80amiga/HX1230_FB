@@ -119,7 +119,8 @@ void loop()
 void tick()
 {
   unsigned long tim = startTime+(millis()-startMillis)/1000;
-  hh = tim/3600L;
+  hh = (tim/3600L);
+  while(hh>23) hh-=24;
   mm = (tim-hh*3600L)/60L;
   ss = tim-hh*3600L-mm*60L;
 }
