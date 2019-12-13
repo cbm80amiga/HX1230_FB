@@ -62,12 +62,11 @@ int sx,sy,mx,my,hx,hy;
 int sdeg,mdeg,hdeg;
 int osx,osy,omx,omy,ohx,ohy;
 int xs,ys,xe,ye;
-unsigned long ms,startMillis;
-unsigned long startTime=16*3600L+58*60+50;
+long ms,startMillis;
+long startTime=16*3600L+58*60+50;
 uint8_t hh = txt2num(__TIME__+0);
 uint8_t mm = txt2num(__TIME__+3);
 uint8_t ss = txt2num(__TIME__+6);
-uint8_t start = 1;
 char buf[20];
 
 // ------------------------------------------------
@@ -104,23 +103,29 @@ void setup(void)
   lcd1.init();
   lcd2.init();
   lcd3.init();
+  lcd1.cls();
+  lcd1.display();
+  lcd2.display();
+  lcd3.display();
   lcd3.setFont(Small4x6PL);
 
   font.init(customRect1, SCR_WD, SCR_HT); // custom fillRect function and screen width and height values
   ms = startMillis = millis();
-  startTime = hh*3600L+mm*60+ss + 10;  // 10 - delay between real time and upload
+  startTime = hh*3600L+mm*60L+ss + 10;  // 10 - delay between real time and upload
+  osx=omx=ohx=cx;
+  osy=omy=ohy=cy;
 }
 
 void loop() 
 {
-  if(ss>15 && ss<45) analogClock(); else digitalClock();
+  if(ss>15 && ss<=45) analogClock(); else digitalClock();
 }
 
 void tick()
 {
   unsigned long tim = startTime+(millis()-startMillis)/1000;
-  hh = (tim/3600L);
-  while(hh>23) hh-=24;
+  if(tim>=24*3600L) { tim-=24*3600L; startTime-=24*3600L; }
+  hh = tim/3600L;
   mm = (tim-hh*3600L)/60L;
   ss = tim-hh*3600L-mm*60L;
 }
@@ -130,9 +135,8 @@ int hhOld=hh,mmOld=mm,ssOld=ss;
 // hh,mm,ss on separate LCD
 void digitalClock()
 {
-  if(millis()-ms<1000 && !start) return;
+  if(millis()-ms<1000) return;
   ms = millis();
-  start = 0;
   hhOld = hh;
   mmOld = mm;
   ssOld = ss;
@@ -249,10 +253,10 @@ void clockConst()
 
 void clockUpdate() 
 {
-  if(millis()-ms<1000 && !start) return;
-  ms = millis();
-  clockConst();
+  //if(millis()-ms<1000) return;
+  //ms = millis();
   tick();
+  clockConst();
 
   sdeg = ss*6;
   mdeg = mm*6+sdeg/60;
@@ -264,16 +268,13 @@ void clockUpdate()
   sx = fastCos(sdeg-90);
   sy = fastSin(sdeg-90);
 
-  if(ss==0 || start) {
-    start = 0;
-    // clear hour and minute hand positions every minute
-    lcd3.drawLine(ohx,ohy, cx,cy, 0);
-    ohx = cx+hx*rhr/MAXSIN;
-    ohy = cy+hy*rhr/MAXSIN;
-    lcd3.drawLine(omx,omy, cx,cy, 0);
-    omx = cx+mx*rmin/MAXSIN;
-    omy = cy+my*rmin/MAXSIN;
-  }
+  // clear hour and minute hand positions every minute
+  lcd3.drawLine(ohx,ohy, cx,cy, 0);
+  ohx = cx+hx*rhr/MAXSIN;
+  ohy = cy+hy*rhr/MAXSIN;
+  lcd3.drawLine(omx,omy, cx,cy, 0);
+  omx = cx+mx*rmin/MAXSIN;
+  omy = cy+my*rmin/MAXSIN;
 
   // new hand positions
   lcd3.drawLine(osx,osy, cx,cy, 0);
