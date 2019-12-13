@@ -60,6 +60,7 @@ void HX1230_FB::init()
 // dc=0 -> command
 // dc=1 -> data
 // hardware SPI: 9 bits are sent in 2 bytes, still faster than software implementation (108-180fps)
+// now obsolete as optimized REAL_SPI9 is much faster (4.5x)
 inline void HX1230_FB::sendSPI(uint8_t v, uint8_t dc)
 {
   CS_ACTIVE;
@@ -163,16 +164,18 @@ void HX1230_FB::display()
   CS_ACTIVE;
 #ifdef REAL_SPI9
 /*
-  s0 d0000000
-  s1 0d111111
-  s2 11d22222
-  s3 222d3333
-  s4 3333d444
-  s5 44444d55
-  s6 555555d6
-  s7 6666666d
-  s8 77777777
+  each 8 bytes encoded in 9 bytes, d=data/command
+  #0 d0000000
+  #1 0d111111
+  #2 11d22222
+  #3 222d3333
+  #4 3333d444
+  #5 44444d55
+  #6 555555d6
+  #7 6666666d
+  #8 77777777
 */
+/*
   uint8_t v,val,lastByte;
   for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
     for(int byteNo=lastByte=0;byteNo<7;byteNo++) {
@@ -184,6 +187,18 @@ void HX1230_FB::display()
     v = scr[i+7];
     SPI.transfer(1|lastByte);
     SPI.transfer(v);
+  }*/
+  // 218% faster than above but takes 206 bytes of flash more
+  for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
+    SPI.transfer(0x80|(scr[i+0]>>1));
+    SPI.transfer(0x40|(scr[i+1]>>2)|(scr[i+0]<<7));
+    SPI.transfer(0x20|(scr[i+2]>>3)|(scr[i+1]<<6));
+    SPI.transfer(0x10|(scr[i+3]>>4)|(scr[i+2]<<5));
+    SPI.transfer(0x08|(scr[i+4]>>5)|(scr[i+3]<<4));
+    SPI.transfer(0x04|(scr[i+5]>>6)|(scr[i+4]<<3));
+    SPI.transfer(0x02|(scr[i+6]>>7)|(scr[i+5]<<2));
+    SPI.transfer(0x01|(scr[i+6]<<1));
+    SPI.transfer(scr[i+7]);
   }
 #else
   for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
