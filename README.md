@@ -36,3 +36,7 @@ https://www.youtube.com/playlist?list=PLxb1losWErZ5eNiQAwB75pXTec5KzX_Cf
 |#6| VCC| 3.3V|
 |#7| BL| 3.3V or via resistor to any digital pin|
 |#8 |GND|GND|
+
+If you find it useful and want to buy me a coffee or a beer:
+
+https://www.paypal.me/cbm80amiga
