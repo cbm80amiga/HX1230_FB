@@ -188,7 +188,7 @@ void HX1230_FB::display()
     SPI.transfer(1|lastByte);
     SPI.transfer(v);
   }*/
-  // 218% faster than above but takes 206 bytes of flash more
+  // 218% faster than above (350fps) but takes 206 bytes of flash more
   for(int i=0; i<SCR_WD*SCR_HT8; i+=8) {
     SPI.transfer(0x80|(scr[i+0]>>1));
     SPI.transfer(0x40|(scr[i+1]>>2)|(scr[i+0]<<7));
@@ -680,6 +680,11 @@ void HX1230_FB::setFont(const uint8_t* font)
   invertCh = 0;
 }
 // ----------------------------------------------------------------
+int HX1230_FB::fontHeight()
+{
+  return cfont.ySize;
+}
+// ----------------------------------------------------------------
 int HX1230_FB::charWidth(uint8_t c, bool last)
 {
   c = convertPolish(c);
@@ -690,13 +695,12 @@ int HX1230_FB::charWidth(uint8_t c, bool last)
   int idx = 4 + (c-cfont.firstCh)*(-cfont.xSize*ys8+1);
   int wd = pgm_read_byte(cfont.font + idx);
   int wdL = 0, wdR = spacing; // default spacing before and behind char
-  if((*isNumberFun)(c)) {
+  if((*isNumberFun)(c) && cfont.minDigitWd>0) {
     if(cfont.minDigitWd>wd) {
       wdL = (cfont.minDigitWd-wd)/2;
       wdR += (cfont.minDigitWd-wd-wdL);
     }
-  } else
-  if(cfont.minCharWd>wd) {
+  } else if(cfont.minCharWd>wd) {
     wdL = (cfont.minCharWd-wd)/2;
     wdR += (cfont.minCharWd-wd-wdL);
   }
@@ -723,14 +727,13 @@ int HX1230_FB::printChar(int xpos, int ypos, unsigned char c)
   byte d;
   wd = fontbyte(cdata++);
   int wdL = 0, wdR = spacing;
-  if((*isNumberFun)(c)) {
+  if((*isNumberFun)(c) && cfont.minDigitWd>0) {
     if(cfont.minDigitWd>wd) {
-      wdL = (cfont.minDigitWd-wd)/2;
+      wdL  = (cfont.minDigitWd-wd)/2;
       wdR += (cfont.minDigitWd-wd-wdL);
     }
-  } else
-  if(cfont.minCharWd>wd) {
-    wdL = (cfont.minCharWd-wd)/2;
+  } else if(cfont.minCharWd>wd) {
+    wdL  = (cfont.minCharWd-wd)/2;
     wdR += (cfont.minCharWd-wd-wdL);
   }
   if(xpos+wd+wdL+wdR>SCR_WD) wdR = max(SCR_WD-xpos-wdL-wd, 0);
@@ -744,7 +747,7 @@ int HX1230_FB::printChar(int xpos, int ypos, unsigned char c)
       int lastbit = cfont.ySize - y8 * 8;
       if (lastbit > 8) lastbit = 8;
       for(b=0; b<lastbit; b++) {
-         if(d & 1) scr[((ypos+y8*8+b)/8)*scrWd+xpos+x] |= 1<<((ypos+y8*8+b)&7);  //drawPixel(xpos+x, ypos+y8*8+b, 1);
+         if(d & 1) scr[((ypos+y8*8+b)/8)*scrWd+xpos+x+wdL] |= 1<<((ypos+y8*8+b)&7);  //drawPixel(xpos+x+wdL, ypos+y8*8+b, 1);
          d>>=1;
       }
     }

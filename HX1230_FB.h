@@ -123,6 +123,7 @@ public:
   int printChar(int xpos, int ypos, unsigned char c);
   int printStr(int xpos, int ypos, char *str);
   int charWidth(uint8_t _ch, bool last=true);
+  int fontHeight();
   int strWidth(char *txt);
   unsigned char convertPolish(unsigned char _c);
   static bool isNumber(uint8_t ch);
